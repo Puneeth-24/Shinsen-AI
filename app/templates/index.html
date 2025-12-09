@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<title>ShinsenAI</title>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+</head>
+
+<body>
+	<div class="container">
+		<h1>ShinsenAI</h1>
+
+		<!-- Camera + Detection -->
+		<section class="camera-section">
+			<h2>1. Show your item to the camera</h2>
+
+			<video id="video" autoplay playsinline></video>
+			<canvas id="canvas" style="display: none"></canvas>
+
+			<div class="controls">
+				<button id="startCameraBtn">Start Camera</button>
+				<button id="captureBtn">Capture & Detect</button>
+			</div>
+
+			<div id="prediction">
+				<p>
+					<strong>Detected item:</strong>
+					<span id="detectedItem">(none yet)</span>
+				</p>
+				<p><span id="confidenceText"></span></p>
+			</div>
+		</section>
+
+		<!-- Quantity + Add to Dashboard -->
+		<section class="input-section">
+			<h2>2. Enter quantity & add to dashboard</h2>
+			<label for="quantityInput">Quantity:</label>
+			<input type="number" id="quantityInput" min="1" />
+			<button id="addItemBtn">Add to Dashboard</button>
+			<p id="message" class="message"></p>
+		</section>
+
+		<!-- Dashboard -->
+		<section class="dashboard-section">
+			<h2>3. Dashboard</h2>
+			<table id="itemsTable">
+				<thead>
+					<tr>
+						<th>Item</th>
+						<th>Quantity</th>
+						<th>Timestamp</th>
+					</tr>
+				</thead>
+				<tbody id="itemsTbody">
+					<!-- Filled by JS -->
+				</tbody>
+			</table>
+		</section>
+	</div>
+
+	<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+
+</html>
