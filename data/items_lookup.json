@@ -1,0 +1,146 @@
+{
+	"apple": {
+		"storeTemp": 4,
+		"shelfLife": 45
+	},
+	"banana": {
+		"storeTemp": 12,
+		"shelfLife": 30
+	},
+	"beetroot": {
+		"storeTemp": 4,
+		"shelfLife": 50
+	},
+	"bell pepper": {
+		"storeTemp": 5,
+		"shelfLife": 40
+	},
+	"cabbage": {
+		"storeTemp": 4,
+		"shelfLife": 50
+	},
+	"capsicum": {
+		"storeTemp": 5,
+		"shelfLife": 40
+	},
+	"carrot": {
+		"storeTemp": 4,
+		"shelfLife": 50
+	},
+	"cauliflower": {
+		"storeTemp": 4,
+		"shelfLife": 40
+	},
+	"chilli pepper": {
+		"storeTemp": 5,
+		"shelfLife": 35
+	},
+	"corn": {
+		"storeTemp": 2,
+		"shelfLife": 30
+	},
+	"cucumber": {
+		"storeTemp": 8,
+		"shelfLife": 25
+	},
+	"eggplant": {
+		"storeTemp": 10,
+		"shelfLife": 30
+	},
+	"garlic": {
+		"storeTemp": 12,
+		"shelfLife": 55
+	},
+	"ginger": {
+		"storeTemp": 5,
+		"shelfLife": 55
+	},
+	"grapes": {
+		"storeTemp": 2,
+		"shelfLife": 25
+	},
+	"jalepeno": {
+		"storeTemp": 5,
+		"shelfLife": 35
+	},
+	"kiwi": {
+		"storeTemp": 4,
+		"shelfLife": 25
+	},
+	"lemon": {
+		"storeTemp": 5,
+		"shelfLife": 45
+	},
+	"lettuce": {
+		"storeTemp": 2,
+		"shelfLife": 20
+	},
+	"mango": {
+		"storeTemp": 12,
+		"shelfLife": 30
+	},
+	"onion": {
+		"storeTemp": 10,
+		"shelfLife": 55
+	},
+	"orange": {
+		"storeTemp": 5,
+		"shelfLife": 50
+	},
+	"paprika": {
+		"storeTemp": 5,
+		"shelfLife": 40
+	},
+	"pear": {
+		"storeTemp": 4,
+		"shelfLife": 35
+	},
+	"peas": {
+		"storeTemp": 2,
+		"shelfLife": 25
+	},
+	"pineapple": {
+		"storeTemp": 5,
+		"shelfLife": 30
+	},
+	"pomegranate": {
+		"storeTemp": 5,
+		"shelfLife": 50
+	},
+	"potato": {
+		"storeTemp": 8,
+		"shelfLife": 60
+	},
+	"raddish": {
+		"storeTemp": 2,
+		"shelfLife": 40
+	},
+	"soy beans": {
+		"storeTemp": 4,
+		"shelfLife": 35
+	},
+	"spinach": {
+		"storeTemp": 2,
+		"shelfLife": 15
+	},
+	"sweetcorn": {
+		"storeTemp": 2,
+		"shelfLife": 30
+	},
+	"sweetpotato": {
+		"storeTemp": 12,
+		"shelfLife": 55
+	},
+	"tomato": {
+		"storeTemp": 12,
+		"shelfLife": 25
+	},
+	"turnip": {
+		"storeTemp": 4,
+		"shelfLife": 50
+	},
+	"watermelon": {
+		"storeTemp": 10,
+		"shelfLife": 30
+	}
+}

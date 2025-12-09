@@ -10,10 +10,17 @@
 <body>
 	<div class="container">
 		<h1>ShinsenAI</h1>
-
+		<!-- Temperature Setting -->
+		<section class="temp-section">
+			<h2>1. Set Refrigerator Temperature</h2>
+			<label for="tempInput">Temperature (°C):</label>
+			<input type="number" id="tempInput" step="0.1" />
+			<button id="setTempBtn">Set Temperature</button>
+			<p>Current temp: <span id="currentTempText">(not set)</span></p>
+		</section>
 		<!-- Camera + Detection -->
 		<section class="camera-section">
-			<h2>1. Show your item to the camera</h2>
+			<h2>2. Show your item to the camera</h2>
 
 			<video id="video" autoplay playsinline></video>
 			<canvas id="canvas" style="display: none"></canvas>
@@ -31,10 +38,9 @@
 				<p><span id="confidenceText"></span></p>
 			</div>
 		</section>
-
 		<!-- Quantity + Add to Dashboard -->
 		<section class="input-section">
-			<h2>2. Enter quantity & add to dashboard</h2>
+			<h2>3. Enter quantity & add to dashboard</h2>
 			<label for="quantityInput">Quantity:</label>
 			<input type="number" id="quantityInput" min="1" />
 			<button id="addItemBtn">Add to Dashboard</button>
@@ -43,18 +49,17 @@
 
 		<!-- Dashboard -->
 		<section class="dashboard-section">
-			<h2>3. Dashboard</h2>
+			<h2>4. Dashboard</h2>
 			<table id="itemsTable">
 				<thead>
 					<tr>
 						<th>Item</th>
 						<th>Quantity</th>
+						<th>Set Temp (°C)</th>
 						<th>Timestamp</th>
 					</tr>
 				</thead>
-				<tbody id="itemsTbody">
-					<!-- Filled by JS -->
-				</tbody>
+				<tbody id="itemsTbody"></tbody>
 			</table>
 		</section>
 	</div>

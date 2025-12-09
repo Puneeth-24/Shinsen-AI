@@ -8,10 +8,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(BASE_DIR, "models", "mobilenetv2_fruits_veggies_finetuned.h5")
 
 # Path to CSV where we log items + quantity
-DATA_CSV_PATH = os.path.join(BASE_DIR, "data", "items_log.csv")
+# DATA_CSV_PATH = os.path.join(BASE_DIR, "data", "items_log.csv")
 
 # Make sure data dir exists
-os.makedirs(os.path.dirname(DATA_CSV_PATH), exist_ok=True)
+# os.makedirs(os.path.dirname(DATA_CSV_PATH), exist_ok=True)
 
 # Image size used during training
 IMG_SIZE = (224, 224)
@@ -55,3 +55,8 @@ CLASS_NAMES = [
     "turnip",
     "watermelon",
 ]
+# ----------------MongoDb----------------
+MONGO_URI = "mongodb://localhost:27017"  # change if using Atlas
+DB_NAME = "fruit_veg_db"
+ITEMS_COLLECTION = "items_log"
+SETTINGS_COLLECTION = "settings"

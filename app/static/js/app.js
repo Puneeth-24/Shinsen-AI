@@ -1,5 +1,4 @@
 // app/static/js/app.js
-
 let videoStream = null;
 let detectedItem = null;
 
@@ -22,17 +21,12 @@ function captureFrameAndPredict() {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
 
-  // Draw current video frame onto canvas
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  // Get base64-encoded image
   const dataURL = canvas.toDataURL("image/jpeg");
 
   fetch("/predict", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ image: dataURL })
   })
     .then(res => res.json())
@@ -71,9 +65,7 @@ function addItem() {
 
   fetch("/add_item", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ item: detectedItem, quantity: quantity })
   })
     .then(res => res.json())
@@ -93,6 +85,54 @@ function addItem() {
     });
 }
 
+// ---------- Temperature handling ----------
+function setTemperature() {
+  const tempInput = document.getElementById("tempInput");
+  const value = tempInput.value.trim();
+  if (!value) {
+    alert("Please enter a temperature.");
+    return;
+  }
+
+  fetch("/set_temp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ temperature: value })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        alert("Error setting temperature: " + data.error);
+      } else {
+        document.getElementById("currentTempText").textContent =
+          `${data.setTemp} °C`;
+      }
+    })
+    .catch(err => {
+      console.error("Fetch /set_temp error:", err);
+      alert("Failed to set temperature.");
+    });
+}
+
+function loadCurrentTemperature() {
+  fetch("/get_temp")
+    .then(res => res.json())
+    .then(data => {
+      const current = data.setTemp;
+      const span = document.getElementById("currentTempText");
+      if (current === null || current === undefined) {
+        span.textContent = "(not set)";
+      } else {
+        span.textContent = `${current} °C`;
+        document.getElementById("tempInput").value = current;
+      }
+    })
+    .catch(err => {
+      console.error("Fetch /get_temp error:", err);
+    });
+}
+
+// ---------- Load items (now including setTemp) ----------
 function loadItems() {
   fetch("/items")
     .then(res => res.json())
@@ -102,16 +142,22 @@ function loadItems() {
 
       (data.items || []).forEach(row => {
         const tr = document.createElement("tr");
+
         const tdItem = document.createElement("td");
         const tdQty = document.createElement("td");
+        const tdTemp = document.createElement("td");
         const tdTs = document.createElement("td");
 
         tdItem.textContent = row.item;
         tdQty.textContent = row.quantity;
+        tdTemp.textContent = row.setTemp !== null && row.setTemp !== undefined
+          ? row.setTemp + " °C"
+          : "(not set)";
         tdTs.textContent = row.timestamp;
 
         tr.appendChild(tdItem);
         tr.appendChild(tdQty);
+        tr.appendChild(tdTemp);
         tr.appendChild(tdTs);
 
         tbody.appendChild(tr);
@@ -122,11 +168,14 @@ function loadItems() {
     });
 }
 
+// ---------- Init ----------
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("startCameraBtn").addEventListener("click", startCamera);
   document.getElementById("captureBtn").addEventListener("click", captureFrameAndPredict);
   document.getElementById("addItemBtn").addEventListener("click", addItem);
 
-  // Load existing dashboard data on page load
+  document.getElementById("setTempBtn").addEventListener("click", setTemperature);
+
+  loadCurrentTemperature();
   loadItems();
 });
