@@ -3,70 +3,171 @@
 
 <head>
 	<meta charset="UTF-8" />
-	<title>ShinsenAI</title>
-	<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+	<title>Smart Fridge Dashboard</title>
+	<!-- Tailwind compiled CSS -->
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}" />
 </head>
 
-<body>
-	<section class="current-temp-box">
-		<h2>Current Refrigerator Temperature</h2>
-		<div id="bigTempDisplay">-- °C</div>
-	</section>
-	<div class="container">
-		<h1>ShinsenAI</h1>
-		<!-- Temperature Setting -->
-		<section class="temp-section">
-			<h2>1. Set Refrigerator Temperature</h2>
-			<label for="tempInput">Temperature (°C):</label>
-			<input type="number" id="tempInput" step="0.1" />
-			<button id="setTempBtn">Set Temperature</button>
-			<p>Current temp: <span id="currentTempText">(not set)</span></p>
-		</section>
-		<!-- Camera + Detection -->
-		<section class="camera-section">
-			<h2>2. Show your item to the camera</h2>
-
-			<video id="video" autoplay playsinline></video>
-			<canvas id="canvas" style="display: none"></canvas>
-
-			<div class="controls">
-				<button id="startCameraBtn">Start Camera</button>
-				<button id="captureBtn">Capture & Detect</button>
+<body class="min-h-screen bg-zinc-50 text-slate-950">
+	<main>
+		<div
+			class="relative flex flex-col h-[100vh] items-center justify-center bg-zinc-50 dark:bg-zinc-900 text-slate-950 transition-bg">
+			<!-- Aurora background layer -->
+			<div class="absolute inset-0 overflow-hidden">
+				<div
+					class="[--white-gradient:repeating-linear-gradient(100deg,var(--white)_0%,var(--white)_7%,var(--transparent)_10%,var(--transparent)_12%,var(--white)_16%)] [--dark-gradient:repeating-linear-gradient(100deg,var(--black)_0%,var(--black)_7%,var(--transparent)_10%,var(--transparent)_12%,var(--black)_16%)] [--aurora:repeating-linear-gradient(100deg,var(--blue-500)_10%,var(--indigo-300)_15%,var(--blue-300)_20%,var(--violet-200)_25%,var(--blue-400)_30%)] [background-image:var(--white-gradient),var(--aurora)] dark:[background-image:var(--dark-gradient),var(--aurora)] [background-size:300%,_200%] [background-position:50%_50%,50%_50%] filter blur-[10px] invert dark:invert-0 after:content-[''] after:absolute after:inset-0 after:[background-image:var(--white-gradient),var(--aurora)] after:dark:[background-image:var(--dark-gradient),var(--aurora)] after:[background-size:200%,_100%] after:animate-aurora after:[background-attachment:fixed] after:mix-blend-difference pointer-events-none absolute -inset-[10px] opacity-50 will-change-transform [mask-image:radial-gradient(ellipse_at_100%_0%,black_10%,var(--transparent)_70%)]">
+				</div>
 			</div>
 
-			<div id="prediction">
-				<p>
-					<strong>Detected item:</strong>
-					<span id="detectedItem">(none yet)</span>
-				</p>
-				<p><span id="confidenceText"></span></p>
-			</div>
-		</section>
-		<!-- Quantity + Add to Dashboard -->
-		<section class="input-section">
-			<h2>3. Enter quantity & add to dashboard</h2>
-			<label for="quantityInput">Quantity:</label>
-			<input type="number" id="quantityInput" min="1" />
-			<button id="addItemBtn">Add to Dashboard</button>
-			<p id="message" class="message"></p>
-		</section>
+			<!-- Foreground content -->
+			<div class="relative z-10 w-full max-w-6xl px-4 md:px-8">
+				<!-- App Title -->
+				<div class="mb-6 text-center">
+					<h1 class="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">
+						Shinsen-AI Smart Fridge
+					</h1>
+					<p class="text-sm md:text-base text-slate-600 dark:text-slate-300 mt-1">
+						Track items, temperature, and dynamic shelf life.
+					</p>
+				</div>
 
-		<!-- Dashboard -->
-		<section class="dashboard-section">
-			<h2>4. Dashboard</h2>
-			<table id="itemsTable">
-				<thead>
-					<tr>
-						<th>Item</th>
-						<th>Quantity</th>
-						<th>Shelf Life (sec)</th>
-						<th>Timestamp</th>
-					</tr>
-				</thead>
-				<tbody id="itemsTbody"></tbody>
-			</table>
-		</section>
-	</div>
+				<!-- Main layout: left = temp, right = controls + dashboard -->
+				<div class="grid gap-6 md:grid-cols-[280px,1fr] items-start">
+					<!-- LEFT: Current Temperature Panel -->
+					<aside
+						class="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/40 p-5 flex flex-col items-center">
+						<h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">
+							Refrigerator Temperature
+						</h2>
+
+						<div id="bigTempDisplay"
+							class="mt-3 text-4xl md:text-5xl font-bold text-blue-600 dark:text-blue-400">
+							-- °C
+						</div>
+
+						<div class="mt-4 w-full">
+							<label for="tempInput"
+								class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Set
+								Temperature (°C)</label>
+							<input id="tempInput" type="number" step="0.1"
+								class="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+							<button id="setTempBtn"
+								class="mt-3 w-full rounded-lg bg-blue-600 text-white text-sm font-medium py-2 hover:bg-blue-700 active:bg-blue-800 transition-colors">
+								Update Temperature
+							</button>
+						</div>
+					</aside>
+
+					<!-- RIGHT: Camera + Inputs + Dashboard -->
+					<section
+						class="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/40 p-5 flex flex-col gap-4">
+						<!-- Camera Section -->
+						<div class="grid gap-4 md:grid-cols-[minmax(0,1.2fr),minmax(0,1fr)]">
+							<div>
+								<h2
+									class="text-base font-semibold text-slate-800 dark:text-slate-100 mb-2">
+									1. Show your item to the camera
+								</h2>
+								<div
+									class="aspect-video w-full rounded-xl border border-slate-300 overflow-hidden bg-black/80">
+									<video id="video" autoplay playsinline
+										class="w-full h-full object-cover"></video>
+								</div>
+								<canvas id="canvas" class="hidden"></canvas>
+
+								<div class="mt-3 flex flex-wrap gap-2">
+									<button id="startCameraBtn"
+										class="rounded-lg bg-slate-800 text-white text-sm font-medium px-4 py-2 hover:bg-slate-900">
+										Start Camera
+									</button>
+									<button id="captureBtn"
+										class="rounded-lg bg-emerald-600 text-white text-sm font-medium px-4 py-2 hover:bg-emerald-700">
+										Capture &amp; Detect
+									</button>
+								</div>
+							</div>
+
+							<!-- Detection + Quantity -->
+							<div class="flex flex-col gap-4">
+								<div
+									class="rounded-xl border border-slate-200 bg-slate-50/80 dark:bg-zinc-800/80 p-3">
+									<h3
+										class="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-1">
+										Detected Item
+									</h3>
+									<p id="detectedItem"
+										class="text-lg font-bold text-blue-700 dark:text-blue-300">
+										(none yet)
+									</p>
+									<p id="confidenceText"
+										class="text-xs text-slate-600 dark:text-slate-300 mt-1">
+									</p>
+								</div>
+
+								<div
+									class="rounded-xl border border-slate-200 bg-slate-50/80 dark:bg-zinc-800/80 p-3">
+									<h3
+										class="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-2">
+										2. Enter quantity &amp; add
+									</h3>
+									<label for="quantityInput"
+										class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Quantity</label>
+									<input id="quantityInput" type="number" min="1"
+										class="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+									<button id="addItemBtn"
+										class="mt-3 w-full rounded-lg bg-emerald-600 text-white text-sm font-medium py-2 hover:bg-emerald-700">
+										Add to Dashboard
+									</button>
+									<p id="message"
+										class="mt-2 text-xs text-emerald-700 dark:text-emerald-400">
+									</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- Dashboard Section -->
+						<div class="mt-4">
+							<h2
+								class="text-base font-semibold text-slate-800 dark:text-slate-100 mb-2">
+								3. Dashboard
+							</h2>
+							<div
+								class="rounded-xl border border-slate-200 overflow-hidden bg-white/80">
+								<div class="max-h-64 overflow-auto">
+									<table class="min-w-full text-left text-sm">
+										<thead class="bg-slate-100/80">
+											<tr>
+												<th
+													class="px-3 py-2 font-semibold text-slate-700">
+													Item
+												</th>
+												<th
+													class="px-3 py-2 font-semibold text-slate-700">
+													Quantity
+												</th>
+												<th
+													class="px-3 py-2 font-semibold text-slate-700">
+													Shelf Life (sec)
+												</th>
+												<th
+													class="px-3 py-2 font-semibold text-slate-700">
+													Timestamp
+												</th>
+											</tr>
+										</thead>
+										<tbody id="itemsTbody"
+											class="divide-y divide-slate-100">
+											<!-- filled by JS -->
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</section>
+				</div>
+			</div>
+		</div>
+	</main>
 
 	<script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>

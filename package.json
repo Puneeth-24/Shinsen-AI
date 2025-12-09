@@ -1,0 +1,28 @@
+{
+	"name": "shinsen-ai",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"build:css": "tailwindcss -i ./app/static/css/input.css -o ./app/static/css/output.css",
+		"watch:css": "tailwindcss -i ./app/static/css/input.css -o ./app/static/css/output.css --watch"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Puneeth-24/Shinsen-AI.git"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"type": "commonjs",
+	"bugs": {
+		"url": "https://github.com/Puneeth-24/Shinsen-AI/issues"
+	},
+	"homepage": "https://github.com/Puneeth-24/Shinsen-AI#readme",
+	"devDependencies": {
+		"autoprefixer": "^10.4.22",
+		"postcss": "^8.5.6",
+		"tailwindcss": "^3.4.18"
+	}
+}
