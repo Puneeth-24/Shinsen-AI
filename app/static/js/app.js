@@ -104,8 +104,11 @@ function setTemperature() {
       if (data.error) {
         alert("Error setting temperature: " + data.error);
       } else {
-        document.getElementById("currentTempText").textContent =
+        document.getElementById("bigTempDisplay").textContent =
           `${data.setTemp} °C`;
+
+        // Recompute shelf lives, so refresh items
+        loadItems();
       }
     })
     .catch(err => {
@@ -119,12 +122,14 @@ function loadCurrentTemperature() {
     .then(res => res.json())
     .then(data => {
       const current = data.setTemp;
-      const span = document.getElementById("currentTempText");
+      const bigDisplay = document.getElementById("bigTempDisplay");
+      const tempInput = document.getElementById("tempInput");
+
       if (current === null || current === undefined) {
-        span.textContent = "(not set)";
+        bigDisplay.textContent = "-- °C";
       } else {
-        span.textContent = `${current} °C`;
-        document.getElementById("tempInput").value = current;
+        bigDisplay.textContent = current + " °C";
+        tempInput.value = current;
       }
     })
     .catch(err => {
@@ -145,19 +150,20 @@ function loadItems() {
 
         const tdItem = document.createElement("td");
         const tdQty = document.createElement("td");
-        const tdTemp = document.createElement("td");
+        const tdShelf = document.createElement("td");
         const tdTs = document.createElement("td");
 
         tdItem.textContent = row.item;
         tdQty.textContent = row.quantity;
-        tdTemp.textContent = row.setTemp !== null && row.setTemp !== undefined
-          ? row.setTemp + " °C"
-          : "(not set)";
+        tdShelf.textContent =
+          row.shelfLife !== null && row.shelfLife !== undefined
+            ? row.shelfLife + " s"
+            : "(unknown)";
         tdTs.textContent = row.timestamp;
 
         tr.appendChild(tdItem);
         tr.appendChild(tdQty);
-        tr.appendChild(tdTemp);
+        tr.appendChild(tdShelf);
         tr.appendChild(tdTs);
 
         tbody.appendChild(tr);

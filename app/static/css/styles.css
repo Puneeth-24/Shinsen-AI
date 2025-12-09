@@ -63,3 +63,19 @@ section {
   margin-top: 8px;
   color: #007700;
 }
+.current-temp-box {
+    background: #f0f8ff;
+    padding: 20px;
+    border-radius: 12px;
+    width: 280px;
+    margin-bottom: 20px;
+    text-align: center;
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+}
+
+#bigTempDisplay {
+    font-size: 48px;
+    font-weight: bold;
+    color: #1a73e8;
+    margin-top: 10px;
+}
