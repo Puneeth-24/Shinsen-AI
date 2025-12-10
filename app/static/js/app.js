@@ -1,6 +1,7 @@
 // app/static/js/app.js
 let videoStream = null;
 let detectedItem = null;
+let isEditingUseQty = false; 
 
 async function startCamera() {
   const video = document.getElementById("video");
@@ -137,6 +138,42 @@ function loadCurrentTemperature() {
     });
 }
 
+function useItem(itemId, maxQty, inputEl) {
+  const val = inputEl.value.trim();
+  if (!val) {
+    alert("Please enter a quantity to mark as used.");
+    return;
+  }
+
+  const used = parseInt(val, 10);
+  if (isNaN(used) || used <= 0) {
+    alert("Used quantity must be a positive integer.");
+    return;
+  }
+  if (used > maxQty) {
+    alert(`You only have ${maxQty} of this item.`);
+    return;
+  }
+
+  fetch("/use_item", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: itemId, usedQuantity: used })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        alert("Error updating item: " + data.error);
+      } else {
+        // Reload table so new quantity / deletions show up
+        loadItems();
+      }
+    })
+    .catch(err => {
+      console.error("Fetch /use_item error:", err);
+      alert("Failed to update item.");
+    });
+}
 // ---------- Load items (now including setTemp) ----------
 function loadItems() {
   fetch("/items")
@@ -152,6 +189,7 @@ function loadItems() {
         const tdQty = document.createElement("td");
         const tdShelf = document.createElement("td");
         const tdTs = document.createElement("td");
+        const tdUse = document.createElement("td");
 
         tdItem.textContent = row.item;
         tdQty.textContent = row.quantity;
@@ -161,10 +199,41 @@ function loadItems() {
             : "(unknown)";
         tdTs.textContent = row.timestamp;
 
+        // ---- Use controls: input + button ----
+        const input = document.createElement("input");
+        input.type = "number";
+        input.min = "1";
+        input.max = row.quantity != null ? String(row.quantity) : "";
+        input.className =
+          "w-16 rounded border border-slate-300 px-1 py-0.5 text-xs mr-2";
+
+        // 👇 Pause auto-refresh while user is typing
+        input.addEventListener("focus", () => {
+          isEditingUseQty = true;
+        });
+        input.addEventListener("blur", () => {
+          // Give a tiny delay in case blur is triggered before click
+          setTimeout(() => {
+            isEditingUseQty = false;
+          }, 100);
+        });
+
+        const btn = document.createElement("button");
+        btn.textContent = "Used";
+        btn.className =
+          "rounded bg-rose-600 text-white text-xs px-2 py-1 hover:bg-rose-700";
+        btn.addEventListener("click", () => {
+          useItem(row.id, row.quantity, input);
+        });
+
+        tdUse.appendChild(input);
+        tdUse.appendChild(btn);
+
         tr.appendChild(tdItem);
         tr.appendChild(tdQty);
         tr.appendChild(tdShelf);
         tr.appendChild(tdTs);
+        tr.appendChild(tdUse);
 
         tbody.appendChild(tr);
       });
@@ -184,4 +253,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadCurrentTemperature();
   loadItems();
+setInterval(() => {
+  if (!isEditingUseQty) {
+    loadItems();
+  }
+}, 1000);
 });

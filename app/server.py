@@ -2,6 +2,7 @@
 
 import datetime
 
+from bson import ObjectId
 from flask import Flask, jsonify, render_template, request
 from pymongo import MongoClient
 
@@ -170,7 +171,23 @@ def add_item():
 def get_items():
     docs = list(items_col.find().sort("timestamp", -1))
     items = []
+
+    now = datetime.datetime.utcnow()
+
     for d in docs:
+        ts = d.get("timestamp")
+        total = d.get(
+            "adjustedShelfLife"
+        )  # total shelf life in seconds at current temp
+
+        if ts is not None and total is not None:
+            elapsed = (now - ts).total_seconds()
+            remaining = int(round(total - elapsed))
+            if remaining < 0:
+                remaining = 0
+        else:
+            remaining = None
+
         items.append(
             {
                 "id": str(d.get("_id")),
@@ -179,10 +196,52 @@ def get_items():
                 "setTemp": d.get("setTemp"),
                 "recTemp": d.get("recTemp"),
                 "baseShelfLife": d.get("baseShelfLife"),
-                "shelfLife": d.get("adjustedShelfLife"),
-                "timestamp": d.get("timestamp").isoformat()
-                if d.get("timestamp")
-                else None,
+                "adjustedShelfLife": total,  # for future alerts/analytics
+                "shelfLife": remaining,  # 👈 this is what the UI uses now
+                "timestamp": ts.isoformat() if ts else None,
             }
         )
+
     return jsonify({"items": items})
+
+
+@app.route("/use_item", methods=["POST"])
+def use_item():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    item_id = data.get("id")
+    used_qty = data.get("usedQuantity")
+
+    if not item_id:
+        return jsonify({"error": "Item ID is required"}), 400
+    if used_qty is None:
+        return jsonify({"error": "usedQuantity is required"}), 400
+
+    try:
+        used_qty = int(used_qty)
+        if used_qty <= 0:
+            raise ValueError
+    except ValueError:
+        return jsonify({"error": "usedQuantity must be a positive integer"}), 400
+
+    try:
+        oid = ObjectId(item_id)
+    except Exception:
+        return jsonify({"error": "Invalid item ID"}), 400
+
+    doc = items_col.find_one({"_id": oid})
+    if not doc:
+        return jsonify({"error": "Item not found"}), 404
+
+    current_qty = doc.get("quantity", 0)
+    if used_qty >= current_qty:
+        # All (or more) used -> remove item completely
+        items_col.delete_one({"_id": oid})
+        return jsonify({"status": "deleted", "remainingQuantity": 0})
+    else:
+        # Partially used -> decrement quantity
+        new_qty = current_qty - used_qty
+        items_col.update_one({"_id": oid}, {"$set": {"quantity": new_qty}})
+        return jsonify({"status": "updated", "remainingQuantity": new_qty})
