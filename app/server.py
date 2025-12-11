@@ -13,6 +13,7 @@ from .config import (
     DB_NAME,
     ITEMS_COLLECTION,
     MONGO_URI,
+    SCANNED_ITEMS,
     SETTINGS_COLLECTION,
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
@@ -28,6 +29,12 @@ mongo_client = MongoClient(MONGO_URI)
 db = mongo_client[DB_NAME]
 items_col = db[ITEMS_COLLECTION]
 settings_col = db[SETTINGS_COLLECTION]
+scanned_col = db[SCANNED_ITEMS]
+# index for the scanned_index for previously scanned items
+try:
+    scanned_col.create_index("itemName", unique=True)
+except Exception as e:
+    print("scanned_items index creation warning:", e)
 
 # --------- Twilio client ---------
 twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
@@ -106,32 +113,52 @@ def compute_remaining_shelf_life(doc, now=None):
     return remaining
 
 
-def get_expiring_items(threshold_seconds: int):
+def get_expiring_items_grouped(threshold_seconds: int):
     """
-    Returns a list of (doc, remaining_seconds) for items
-    whose remaining shelf life is > 0 and <= threshold_seconds
-    AND that have not been alerted before (alertSent != True).
+    Returns dict keyed by itemName with aggregated info for docs that are expiring
+    and not yet alertSent.
     """
     now = datetime.datetime.utcnow()
-    docs = items_col.find({"alertSent": {"$ne": True}})
-    expiring = []
+    cursor = items_col.find({"alertSent": {"$ne": True}})
+    grouped = {}
 
-    for d in docs:
+    for d in cursor:
         remaining = compute_remaining_shelf_life(d, now)
         if remaining is None:
             continue
-        if 0 < remaining <= threshold_seconds:
-            expiring.append((d, remaining))
+        if not (0 < remaining <= threshold_seconds):
+            continue
 
-    expiring.sort(key=lambda x: x[1])  # soonest first
-    return expiring
+        name = d.get("itemName", "Unknown")
+        qty = int(d.get("quantity", 0))
+        rec_temp = d.get("recTemp")
+        base = d.get("baseShelfLife")
+        adj = d.get("adjustedShelfLife")
+        _id = d.get("_id")
+
+        if name not in grouped:
+            grouped[name] = {
+                "total_qty": qty,
+                "min_remaining": remaining,
+                "docs": [_id],
+                "recTemp": rec_temp,
+                "baseShelf": base,
+                "adjustedShelf": adj,
+            }
+        else:
+            g = grouped[name]
+            g["total_qty"] += qty
+            if remaining < g["min_remaining"]:
+                g["min_remaining"] = remaining
+            g["docs"].append(_id)
+
+    return grouped
 
 
-def format_alert_message(expiring_items, current_temp, threshold_seconds):
-    """
-    Build a single WhatsApp message body listing all expiring items.
-    """
-    if not expiring_items:
+def format_grouped_alert_message(
+    grouped_items: dict, current_temp, threshold_seconds: int
+):
+    if not grouped_items:
         return None
 
     lines = []
@@ -142,18 +169,20 @@ def format_alert_message(expiring_items, current_temp, threshold_seconds):
     )
     lines.append("")
 
-    for doc, remaining in expiring_items:
-        name = doc.get("itemName", "Unknown item")
-        qty = doc.get("quantity", "?")
-        rec_temp = doc.get("recTemp")
-        base = doc.get("baseShelfLife")
-        adj = doc.get("adjustedShelfLife")
+    sorted_items = sorted(grouped_items.items(), key=lambda kv: kv[1]["min_remaining"])
+
+    for name, info in sorted_items:
+        qty = info["total_qty"]
+        remaining = info["min_remaining"]
+        rec_temp = info.get("recTemp")
+        base = info.get("baseShelf")
+        adj = info.get("adjustedShelf")
 
         line = f"• *{name}* – qty: {qty}, remaining: {remaining}s"
         if rec_temp is not None:
-            line += f", rec. temp: {rec_temp}°C"
+            line += f", rec. temp: {float(rec_temp):.1f}°C"
         if adj is not None and base is not None:
-            line += f" (base: {base}s, adjusted: {adj}s)"
+            line += f" (base: {int(base)}s, adjusted: {int(adj)}s)"
         lines.append(line)
 
     lines.append("")
@@ -179,41 +208,45 @@ def send_whatsapp_alert(message_body: str):
 
 
 def process_alerts(threshold_seconds: int | None = None, mark_alerted: bool = True):
-    """
-    Core alert logic:
-      - find expiring items
-      - format WhatsApp message
-      - send via Twilio
-      - mark them as alerted (alertSent=true) if required
-    Returns a dict result summary.
-    """
     if threshold_seconds is None:
         threshold_seconds = ALERT_THRESHOLD_SECONDS
 
-    expiring = get_expiring_items(threshold_seconds)
-    if not expiring:
-        return {"status": "no_items_expiring", "threshold": threshold_seconds}
+    grouped = get_expiring_items_grouped(threshold_seconds)
+    if not grouped:
+        return {
+            "status": "no_items_expiring",
+            "threshold": threshold_seconds,
+            "num_items": 0,
+        }
 
     current_temp = get_current_temp()
-    message_body = format_alert_message(expiring, current_temp, threshold_seconds)
+    message_body = format_grouped_alert_message(
+        grouped, current_temp, threshold_seconds
+    )
     if not message_body:
         return {"status": "no_message_built"}
 
-    sid = send_whatsapp_alert(message_body)
+    try:
+        sid = send_whatsapp_alert(message_body)
+    except Exception as e:
+        print("Twilio send error:", e)
+        return {"status": "error", "error": str(e)}
 
-    # Mark these items as alerted so we don't spam
     if mark_alerted:
+        all_ids = []
+        for info in grouped.values():
+            all_ids.extend(info["docs"])
         now = datetime.datetime.utcnow()
-        ids = [doc["_id"] for (doc, _) in expiring]
         items_col.update_many(
-            {"_id": {"$in": ids}},
+            {"_id": {"$in": all_ids}},
             {"$set": {"alertSent": True, "alertSentAt": now}},
         )
 
     return {
         "status": "sent",
         "threshold": threshold_seconds,
-        "num_items": len(expiring),
+        "num_grouped_items": len(grouped),
+        "num_documents_marked": len(all_ids),
         "twilio_sid": sid,
     }
 
@@ -233,6 +266,11 @@ def predict():
     try:
         data_url = data["image"]
         item, conf = predict_from_data_url(model, data_url)
+
+        # NOTE: No longer upserting into scanned_items here.
+        # We only return the prediction; the frontend will add to scanned_items
+        # after the user confirms and /add_item returns success.
+
         return jsonify({"item": item, "confidence": conf})
     except Exception as e:
         print("Prediction error:", e)
@@ -307,9 +345,23 @@ def add_item():
         "timestamp": ts,
     }
 
-    items_col.insert_one(doc)
-
-    return jsonify({"status": "ok"})
+    res = items_col.insert_one(doc)
+    try:
+        scanned_col.update_one(
+            {"itemName": item},
+            {
+                "$set": {
+                    "itemName": item,
+                    "lastSeenAt": datetime.datetime.utcnow(),
+                },
+                "$setOnInsert": {"createdAt": datetime.datetime.utcnow()},
+            },
+            upsert=True,
+        )
+    except Exception as e:
+        # Log but do not fail the add_item operation
+        print("Warning: failed to upsert scanned item:", e)
+    return jsonify({"status": "ok", "id": str(res.inserted_id)})
 
 
 @app.route("/items", methods=["GET"])
@@ -370,7 +422,7 @@ def use_item():
     if not doc:
         return jsonify({"error": "Item not found"}), 404
 
-    current_qty = doc.get("quantity", 0)
+    current_qty = int(doc.get("quantity", 0))
     if used_qty >= current_qty:
         # All (or more) used -> remove item completely
         items_col.delete_one({"_id": oid})
@@ -394,6 +446,39 @@ def send_alerts():
     except Exception as e:
         print("send_alerts error:", e)
         return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route("/scanned_items", methods=["GET"])
+def get_scanned_items():
+    """
+    Returns a list of previously scanned item names (most recent first).
+    """
+    docs = list(scanned_col.find().sort("lastSeenAt", -1))
+    items = [
+        {
+            "itemName": d.get("itemName"),
+            "lastSeenAt": d.get("lastSeenAt").isoformat()
+            if d.get("lastSeenAt")
+            else None,
+            "lastConfidence": d.get("lastConfidence"),
+        }
+        for d in docs
+    ]
+    return jsonify({"items": items})
+
+
+@app.route("/scanned_items/delete", methods=["POST"])
+def delete_scanned_item():
+    """
+    Optional: remove a scanned item from the small lookup list.
+    body: { "itemName": "apple" }
+    """
+    data = request.get_json()
+    if not data or "itemName" not in data:
+        return jsonify({"error": "itemName required"}), 400
+    name = data["itemName"]
+    scanned_col.delete_one({"itemName": name})
+    return jsonify({"status": "deleted", "itemName": name})
 
 
 # --------- APScheduler: periodic alert checks ---------

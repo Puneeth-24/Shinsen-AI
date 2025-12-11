@@ -77,6 +77,9 @@ function addItem() {
         message.textContent = "Item added successfully!";
         quantityInput.value = "";
         loadItems();
+		if (typeof loadScannedItems === "function") {
+      loadScannedItems();
+    }
         setTimeout(() => { message.textContent = ""; }, 2000);
       }
     })
@@ -86,6 +89,38 @@ function addItem() {
     });
 }
 
+// load previously scanned items and render as clickable chips/buttons
+function loadScannedItems() {
+  fetch("/scanned_items")
+    .then(res => res.json())
+    .then(data => {
+      const container = document.getElementById("scannedItemsList");
+      if (!container) return;
+      container.innerHTML = "";
+
+      (data.items || []).forEach(it => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className =
+          "px-3 py-1 rounded-full bg-slate-100 text-slate-800 text-sm hover:bg-slate-200";
+        btn.textContent = it.itemName;
+        btn.title = it.lastConfidence ? `last: ${(it.lastConfidence*100).toFixed(1)}%` : "";
+
+        btn.addEventListener("click", () => {
+          // Set as detected item (so user can just enter qty & add)
+          detectedItem = it.itemName;
+          document.getElementById("detectedItem").textContent = it.itemName;
+          document.getElementById("confidenceText").textContent =
+            it.lastConfidence ? `Confidence: ${(it.lastConfidence*100).toFixed(2)}%` : "";
+        });
+
+        container.appendChild(btn);
+      });
+    })
+    .catch(err => {
+      console.error("Fetch /scanned_items error:", err);
+    });
+}
 // ---------- Temperature handling ----------
 function setTemperature() {
   const tempInput = document.getElementById("tempInput");
@@ -253,6 +288,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadCurrentTemperature();
   loadItems();
+loadScannedItems();
 setInterval(() => {
   if (!isEditingUseQty) {
     loadItems();

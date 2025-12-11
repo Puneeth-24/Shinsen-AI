@@ -62,7 +62,7 @@ MONGO_URI = "mongodb://localhost:27017"  # change if using Atlas
 DB_NAME = "fruit_veg_db"
 ITEMS_COLLECTION = "items_log"
 SETTINGS_COLLECTION = "settings"
-
+SCANNED_ITEMS = "scanned_items"
 # -----------------Item Lookup JSON---------
 ITEMS_LOOKUP_PATH = os.path.join(BASE_DIR, "data/items_lookup.json")
 
